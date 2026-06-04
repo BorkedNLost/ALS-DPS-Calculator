@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ALS Unit Data Calculator</title>
+<style>
+:root {
+    --bg: #0a0a0d;
+    --panel: #14171f;
+    --panel-2: #111318;
+    --panel-3: #0d0f14;
+    --border: #1c2029;
+    --border-light: #2e333f;
+    --red: #e63946;
+    --orange: #ff8c42;
+    --green: #22c55e;
+    --text: #ffffff;
+    --text-dim: #94a3b8;
+    --text-muted: #5a5a66;
+    --blue: #38bdf8;
+    --yellow: #fbbf24;
+    --purple: #a855f7;
+    --pink: #ff79c6;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    background:
+        radial-gradient(circle at 15% 0%, rgba(230,57,70,0.07), transparent 45%),
+        radial-gradient(circle at 85% 100%, rgba(255,140,66,0.05), transparent 45%),
+        var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    padding: 24px 16px 80px;
+}
+.wrap { max-width: 1300px; margin: 0 auto; }
+
+header { text-align: center; margin-bottom: 28px; }
+header h1 {
+    font-size: 26px; font-weight: 900; letter-spacing: 1px;
+    background: linear-gradient(135deg, var(--red), var(--orange));
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
+header p { color: var(--text-dim); font-size: 13px; margin-top: 5px; }
+
+.main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+@media(max-width:900px){ .main-grid { grid-template-columns: 1fr; } }
+
+.card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+    margin-bottom: 18px;
+}
+.card h2 {
+    font-size: 11px; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 1.5px; color: var(--orange);
+    margin-bottom: 14px; padding-bottom: 9px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+}
+.card h2 .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--orange); flex-shrink: 0; }
+
+.field { margin-bottom: 12px; }
+.field label {
+    display: block; font-size: 11px; font-weight: 600;
+    color: var(--text-dim); margin-bottom: 4px;
+    text-transform: uppercase; letter-spacing: 0.4px;
+}
+input, select {
+    background: var(--panel-2);
+    border: 1px solid var(--border-light);
+    border-radius: 6px;
+    padding: 8px 10px;
+    color: var(--text);
+    font-size: 13px;
+    font-family: inherit;
+    width: 100%;
+}
+input:focus, select:focus { outline: none; border-color: var(--orange); }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+
+/* Passive rows */
+.passive-row {
+    display: grid;
+    grid-template-columns: 160px 1fr;
+    gap: 8px;
+    margin-bottom: 8px;
+    align-items: center;
+}
+.passive-row label-num {
+    font-size: 10px; color: var(--text-muted); font-weight: 700;
+    display: block; margin-bottom: 3px;
+}
+
+/* Ability rows */
+.ability-block {
+    background: var(--panel-3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 10px;
+}
+.ability-block .ab-title {
+    font-size: 10px; font-weight: 800; color: var(--yellow);
+    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;
+}
+
+/* DPS preview */
+.dps-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 14px; }
+.dps-box {
+    background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px; text-align: center;
+}
+.dps-box.peak { border-color: rgba(34,197,94,0.4); background: rgba(34,197,94,0.04); }
+.dps-box .lbl { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); font-weight: 700; margin-bottom: 3px; }
+.dps-box .val { font-size: 18px; font-weight: 900; font-family: monospace; }
+.dps-box .sub { font-size: 10px; color: var(--text-dim); margin-top: 2px; }
+
+.best-build {
+    background: var(--panel-3); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px; margin-bottom: 14px;
+}
+.bb-lbl { font-size: 9px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 7px; }
+.badge {
+    display: inline-block; padding: 2px 7px; border-radius: 4px;
+    font-size: 10px; font-weight: 700; margin-right: 4px; margin-bottom: 4px;
+}
+.b-trait { background: #1b121e; color: var(--pink); border: 1px solid #44204c; }
+.b-tech { background: #1d1c12; color: #e6db74; border: 1px solid #4f4920; }
+.b-tree { background: #12181d; color: var(--blue); border: 1px solid #1e3a4f; }
+
+.lua-out {
+    background: #0d0f14; border: 1px solid var(--border); border-radius: 8px;
+    padding: 12px; font-family: monospace; font-size: 12px; line-height: 1.65;
+    color: #c8d6e5; white-space: pre; overflow-x: auto;
+}
+.lua-key { color: #79dcf2; }
+.lua-str { color: #f1fa8c; }
+.lua-num { color: #bd93f9; }
+
+.btn {
+    display: block; width: 100%;
+    background: linear-gradient(135deg, var(--red), var(--orange));
+    color: white; border: none; border-radius: 8px;
+    padding: 11px; font-size: 13px; font-weight: 800;
+    letter-spacing: 1px; text-transform: uppercase;
+    cursor: pointer; margin-top: 12px; transition: opacity 0.15s;
+}
+.btn:hover { opacity: 0.88; }
+.copied { color: var(--green); font-size: 11px; text-align: center; margin-top: 6px; height: 14px; font-weight: 700; }
+.section-divider {
+    font-size: 10px; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 1.5px; color: var(--text-muted);
+    margin: 14px 0 8px; padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+}
+.cap-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+    <h1>ALS Unit Data Calculator</h1>
+    <p>Enter base stats + passives + abilities → get peak DPS preview + Lua block for Module:UnitData</p>
+</header>
+
+<div class="main-grid">
+<!-- LEFT COLUMN -->
+<div>
+
+<!-- Unit Info -->
+<div class="card">
+    <h2><span class="dot"></span>Unit Info</h2>
+    <div class="field"><label>Unit Key (table key)</label><input id="key" value="Triple T"></div>
+    <div class="field"><label>Display Name</label><input id="name" value="Triple Threat"></div>
+    <div class="row2">
+        <div class="field"><label>Element</label><input id="element" value="Darkness"></div>
+        <div class="field"><label>Sub Type</label><input id="sub_type" value="Physical"></div>
+    </div>
+    <div class="field"><label>Image File</label><input id="image" value="Triple_Threat_Face.png"></div>
+</div>
+
+<!-- Base Stats -->
+<div class="card">
+    <h2><span class="dot"></span>Base Stats</h2>
+    <div class="row2">
+        <div class="field"><label>Base Damage</label><input id="base_dmg" type="number" value="125000"></div>
+        <div class="field"><label>Base SPA (s)</label><input id="base_spa" type="number" step="0.01" value="3.10"></div>
+    </div>
+    <div class="row2">
+        <div class="field"><label>Base Range</label><input id="base_rng" type="number" value="45"></div>
+        <div class="field"><label>Max Placement</label><input id="max_placement" type="number" value="4"></div>
+    </div>
+    <div class="row2">
+        <div class="field"><label>Base Crit Chance (%)</label><input id="base_cc" type="number" step="1" value="0" placeholder="e.g. 30"></div>
+        <div class="field"><label>Base Crit Damage (%)</label><input id="base_cdmg" type="number" step="1" value="0" placeholder="e.g. 150"></div>
+    </div>
+</div>
+
+<!-- Passives -->
+<div class="card">
+    <h2><span class="dot"></span>Additive Passives</h2>
+    <div id="add_passives"></div>
+    <div class="section-divider">Multiplicative Passives</div>
+    <div id="mul_passives"></div>
+    <div class="cap-row">
+        <div class="field"><label>SPA Cap (min SPA)</label><input id="spa_cap" type="number" step="0.01" value="1"></div>
+        <div class="field"><label>Crit Chance Cap (%)</label><input id="cc_cap" type="number" step="1" value="100" placeholder="e.g. 100"></div>
+    </div>
+</div>
+
+<!-- DoTs -->
+<div class="card">
+    <h2><span class="dot"></span>DoTs</h2>
+    <div id="dots_container"></div>
+</div>
+
+<!-- Abilities -->
+<div class="card">
+    <h2><span class="dot"></span>Abilities</h2>
+    <div id="abilities_container"></div>
+    <div class="field" style="margin-top:8px">
+        <label>Ability Cooldown Type</label>
+        <select id="abil_cooldown">
+            <option value="local">Local (multiplies by placement count)</option>
+            <option value="global">Global (single instance)</option>
+        </select>
+    </div>
+</div>
+
+</div><!-- end left -->
+
+<!-- RIGHT COLUMN -->
+<div>
+
+<!-- DPS Preview -->
+<div class="card">
+    <h2><span class="dot"></span>Peak DPS Preview</h2>
+    <div class="dps-grid">
+        <div class="dps-box peak">
+            <div class="lbl">Peak Total DPS</div>
+            <div class="val" id="peak_dps" style="color:var(--green)">—</div>
+            <div class="sub">best combo × placements</div>
+        </div>
+        <div class="dps-box">
+            <div class="lbl">Basic Attack DPS</div>
+            <div class="val" id="basic_dps" style="color:#f87171">—</div>
+        </div>
+        <div class="dps-box">
+            <div class="lbl">Ability DPS</div>
+            <div class="val" id="abil_dps_disp" style="color:var(--yellow)">—</div>
+        </div>
+        <div class="dps-box">
+            <div class="lbl">DoT DPS</div>
+            <div class="val" id="dot_dps_disp" style="color:#fb7185">—</div>
+        </div>
+    </div>
+
+    <div class="best-build">
+        <div class="bb-lbl">Optimal Build</div>
+        <div id="best_badges">—</div>
+    </div>
+
+    <!-- Calculated base values (what goes into Lua) -->
+    <div class="dps-grid" style="margin-bottom:0">
+        <div class="dps-box">
+            <div class="lbl">Calculated base_abil_dps</div>
+            <div class="val" id="calc_abil" style="color:var(--blue);font-size:14px">—</div>
+            <div class="sub">raw, before multipliers</div>
+        </div>
+        <div class="dps-box">
+            <div class="lbl">Calculated base_dot</div>
+            <div class="val" id="calc_dot" style="color:var(--purple);font-size:14px">—</div>
+            <div class="sub">raw, before multipliers</div>
+        </div>
+    </div>
+</div>
+
+<!-- Manual Selector -->
+<div class="card">
+    <h2><span class="dot"></span>Manual Build Selector</h2>
+    <div class="row2">
+        <div class="field"><label>Trait</label>
+            <select id="manual_trait">
+                <option value="">— Pick Trait —</option>
+                <option value="None">None</option>
+                <option value="Enhanced">Enhanced</option>
+                <option value="Demonic">Demonic</option>
+                <option value="Angelic">Angelic</option>
+                <option value="Piercing">Piercing</option>
+                <option value="FinishingBlow">Finishing Blow</option>
+                <option value="Sniper">Sniper</option>
+                <option value="Lightspeed">Lightspeed</option>
+                <option value="Ricochet">Ricochet</option>
+                <option value="Gilded">Gilded</option>
+                <option value="Catalyst">Catalyst</option>
+                <option value="Infliction">Infliction</option>
+                <option value="Metamorphosis">Metamorphosis</option>
+                <option value="Sundering">Sundering</option>
+                <option value="Stellar">Stellar</option>
+            </select>
+        </div>
+        <div class="field"><label>Skill Tree</label>
+            <select id="manual_tree">
+                <option value="">— Pick Tree —</option>
+                <option value="Damage">Damage</option>
+                <option value="Elemental">Elemental</option>
+                <option value="Critical">Critical</option>
+                <option value="Support">Support</option>
+            </select>
+        </div>
+    </div>
+    <div class="dps-box" style="text-align:center;padding:14px;margin-top:4px;">
+        <div class="lbl">Manual Build DPS</div>
+        <div class="val" id="manual_result" style="color:var(--orange);font-size:22px;">—</div>
+        <div class="sub" id="manual_breakdown" style="margin-top:4px;font-size:11px;">Select a trait and tree above</div>
+    </div>
+</div>
+
+<!-- Top 5 -->
+<div class="card">
+    <h2><span class="dot"></span>Top 5 Builds</h2>
+    <div id="top5_list">—</div>
+</div>
+
+<!-- Passive Summary -->
+<div class="card">
+    <h2><span class="dot"></span>Passive Summary</h2>
+    <pre id="passive_summary" style="font-size:12px;color:var(--text-dim);line-height:1.7;white-space:pre-wrap;font-family:monospace;">No passives entered</pre>
+</div>
+
+<!-- Lua Output -->
+<div class="card">
+    <h2><span class="dot"></span>Lua Output — Module:UnitData</h2>
+    <div class="lua-out" id="lua_output">—</div>
+    <button class="btn" onclick="copyLua()">Copy Lua Block</button>
+    <div class="copied" id="copied_msg"></div>
+</div>
+
+</div><!-- end right -->
+</div><!-- end main-grid -->
+</div>
+
+<script>
+// ===== Constants =====
+var LV = 3.7, SSS_DMG = 1.25, SSS_SPA = 0.875, SSS_RNG = 1.125;
+
+var TREES = {
+    Damage:    {name:"Damage",    dmg:1.26, spa:0.90, rng:1.03, cdmg:0,    cc:0,    abil:1.00, dot:1.00},
+    Elemental: {name:"Elemental", dmg:1.32, spa:1.00, rng:1.07, cdmg:0,    cc:0,    abil:1.15, dot:1.15},
+    Critical:  {name:"Critical",  dmg:1.00, spa:1.00, rng:1.05, cdmg:0.60, cc:0.30, abil:1.00, dot:1.00},
+    Support:   {name:"Support",   dmg:1.00, spa:0.80, rng:1.12, cdmg:0,    cc:0,    abil:1.00, dot:1.00}
+};
+
+// Single combined trait list — one trait per unit, no double stacking
+var TRAITS = {
+    None:          {name:"None",          dmg:1.00, spa:1.00, rng:1.00, abil:1.00, dot:1.00, cc:0, cdmg:0, special:""},
+    Enhanced:      {name:"Enhanced",      dmg:1.30, spa:0.95, rng:1.05, abil:1.30, dot:1.30, cc:0, cdmg:0, special:""},
+    Demonic:       {name:"Demonic",       dmg:1.10, spa:1.00, rng:1.00, abil:1.00, dot:1.00, cc:0, cdmg:0, special:""},
+    Angelic:       {name:"Angelic",       dmg:1.00, spa:1.00, rng:1.15, abil:1.00, dot:1.00, cc:0, cdmg:0, special:""},
+    Piercing:      {name:"Piercing",      dmg:1.00, spa:1.00, rng:1.00, abil:1.00, dot:1.00, cc:0.15, cdmg:0.30, special:""},
+    FinishingBlow: {name:"Finishing Blow",dmg:1.00, spa:1.00, rng:1.00, abil:1.00, dot:1.00, cc:0.10, cdmg:0, special:""},
+    Sniper:        {name:"Sniper",        dmg:1.00, spa:1.00, rng:1.25, abil:1.00, dot:1.00, cc:0, cdmg:0, special:""},
+    Lightspeed:    {name:"Lightspeed",    dmg:1.00, spa:0.75, rng:1.00, abil:1.00, dot:1.00, cc:0, cdmg:0, special:""},
+    Ricochet:      {name:"Ricochet",      dmg:1.00, spa:1.00, rng:1.25, abil:1.00, dot:1.00, cc:0, cdmg:0, special:""},
+    Gilded:        {name:"Gilded",        dmg:1.00, spa:1.00, rng:1.00, abil:1.00, dot:1.00, cc:0, cdmg:0, special:""},
+    Catalyst:      {name:"Catalyst",      dmg:1.00, spa:0.90, rng:1.10, abil:1.50, dot:1.00, cc:0, cdmg:0, special:""},
+    Infliction:    {name:"Infliction",    dmg:1.30, spa:1.00, rng:1.00, abil:1.00, dot:1.30, cc:0, cdmg:0, special:"inflict"},
+    Metamorphosis: {name:"Metamorphosis", dmg:1.00, spa:1.00, rng:1.00, abil:1.00, dot:1.00, cc:0, cdmg:0, special:""},
+    Sundering:     {name:"Sundering",     dmg:1.00, spa:1.00, rng:1.00, abil:1.00, dot:1.00, cc:0.20, cdmg:0, special:"sunder"},
+    Stellar:       {name:"Stellar",       dmg:4.00, spa:0.90, rng:1.10, abil:1.00, dot:1.00, cc:0, cdmg:0, special:"stellar"}
+};
+
+var BUFF_TYPES = ["DMG%","SPA%","RNG%","Crit DMG","Crit Chance","Flat DMG"];
+
+// ===== Build passive rows =====
+function buildPassiveRows(containerId, count, prefix) {
+    var c = document.getElementById(containerId);
+    c.innerHTML = '';
+    for (var i = 0; i < count; i++) {
+        var idx = i;
+        var row = document.createElement('div');
+        row.className = 'passive-row';
+        row.style.marginBottom = '8px';
+
+        var sel = document.createElement('select');
+        sel.id = prefix + '_type_' + idx;
+        sel.innerHTML = '<option value="">— None —</option>' +
+            BUFF_TYPES.map(function(b){ return '<option value="'+b+'">'+b+'</option>'; }).join('');
+        sel.addEventListener('change', update);
+
+        var inp = document.createElement('input');
+        inp.type = 'number';
+        inp.step = '0.01';
+        inp.placeholder = 'Value';
+        inp.id = prefix + '_val_' + idx;
+        inp.addEventListener('input', update);
+
+        var lbl = document.createElement('div');
+        lbl.style.cssText = 'font-size:10px;color:var(--text-muted);font-weight:700;margin-bottom:3px;';
+        lbl.textContent = 'Passive ' + (idx+1);
+
+        var leftDiv = document.createElement('div');
+        leftDiv.appendChild(lbl);
+        leftDiv.appendChild(sel);
+
+        row.appendChild(leftDiv);
+        row.appendChild(inp);
+        c.appendChild(row);
+    }
+}
+
+function buildDots(count) {
+    var c = document.getElementById('dots_container');
+    c.innerHTML = '';
+    for (var i = 0; i < count; i++) {
+        var idx = i;
+        var block = document.createElement('div');
+        block.className = 'ability-block';
+        block.innerHTML =
+            '<div class="ab-title">DoT ' + (idx+1) + '</div>' +
+            '<div class="row2">' +
+            '<div class="field"><label>Multiplier (% of base DMG)</label><input type="number" step="0.01" id="dot_mult_'+idx+'" placeholder="e.g. 0.5 = 50%"></div>' +
+            '<div class="field"><label>Proc Time (s)</label><input type="number" step="0.01" id="dot_proc_'+idx+'" placeholder="e.g. 1"></div>' +
+            '</div>';
+        c.appendChild(block);
+        document.getElementById('dot_mult_'+idx).addEventListener('input', update);
+        document.getElementById('dot_proc_'+idx).addEventListener('input', update);
+    }
+}
+
+function buildAbilities(count) {
+    var c = document.getElementById('abilities_container');
+    c.innerHTML = '';
+    for (var i = 0; i < count; i++) {
+        var idx = i;
+        var block = document.createElement('div');
+        block.className = 'ability-block';
+        block.innerHTML =
+            '<div class="ab-title">Ability ' + (idx+1) + '</div>' +
+            '<div class="row3">' +
+            '<div class="field"><label>Type</label><select id="ab_type_'+idx+'"><option value="flat">Flat Damage</option><option value="pct">% of Base DMG</option></select></div>' +
+            '<div class="field"><label>Value</label><input type="number" id="ab_val_'+idx+'" placeholder="damage or %"></div>' +
+            '<div class="field"><label>Cooldown (s)</label><input type="number" step="0.01" id="ab_cd_'+idx+'" placeholder="e.g. 10"></div>' +
+            '</div>';
+        c.appendChild(block);
+        document.getElementById('ab_type_'+idx).addEventListener('change', update);
+        document.getElementById('ab_val_'+idx).addEventListener('input', update);
+        document.getElementById('ab_cd_'+idx).addEventListener('input', update);
+    }
+}
+
+// ===== Read passives =====
+function readPassives(prefix, count) {
+    var result = {dmg:0, spa:0, rng:0, cdmg:0, cc:0, flat:0, mul_dmg:1, mul_spa:1, mul_rng:1, mul_cdmg:0, mul_cc:0, mul_flat:0};
+    for (var i = 0; i < count; i++) {
+        var type = (document.getElementById(prefix+'_type_'+i)||{}).value;
+        var val = parseFloat((document.getElementById(prefix+'_val_'+i)||{}).value) || 0;
+        if (!type) continue;
+        if (prefix === 'add') {
+            if (type==='DMG%') result.dmg += val/100;
+            else if (type==='SPA%') result.spa += val/100;
+            else if (type==='RNG%') result.rng += val/100;
+            else if (type==='Crit DMG') result.cdmg += val/100;
+            else if (type==='Crit Chance') result.cc += val/100;
+            else if (type==='Flat DMG') result.flat += val;
+        } else {
+            if (type==='DMG%') result.mul_dmg *= (1+val/100);
+            else if (type==='SPA%') result.mul_spa *= (1+val/100);
+            else if (type==='RNG%') result.mul_rng *= (1+val/100);
+            else if (type==='Crit DMG') result.mul_cdmg += val/100;
+            else if (type==='Crit Chance') result.mul_cc += val/100;
+            else if (type==='Flat DMG') result.mul_flat += val;
+        }
+    }
+    return result;
+}
+
+// ===== Calculate base_abil_dps and base_dot (raw, before Lua multipliers) =====
+function calcBaseAbilDps(base_dmg) {
+    var total = 0;
+    for (var i = 0; i < 3; i++) {
+        var type = (document.getElementById('ab_type_'+i)||{}).value;
+        var val = parseFloat((document.getElementById('ab_val_'+i)||{}).value) || 0;
+        var cd = parseFloat((document.getElementById('ab_cd_'+i)||{}).value) || 0;
+        if (!val || !cd) continue;
+        var dmg = type === 'pct' ? base_dmg * val : val;
+        total += dmg / cd;
+    }
+    return total;
+}
+
+function calcBaseDot(base_dmg) {
+    var total = 0;
+    for (var i = 0; i < 3; i++) {
+        var mult = parseFloat((document.getElementById('dot_mult_'+i)||{}).value) || 0;
+        var proc = parseFloat((document.getElementById('dot_proc_'+i)||{}).value) || 0;
+        if (!mult || !proc) continue;
+        total += (base_dmg * mult) / proc;
+    }
+    return total;
+}
+
+// ===== Simulation =====
+function runSim(unit, tree, trait, add, mul) {
+    var placements = unit.max_placement || 1;
+    if (trait.special === 'stellar') placements = 1;
+    var add_dmg_mult = 1 + add.dmg;
+    var add_spa_mult = 1 - add.spa;
+    var final_dmg = (unit.base_dmg + add.flat) * LV * SSS_DMG * tree.dmg * trait.dmg * add_dmg_mult * mul.mul_dmg;
+    var final_spa = unit.base_spa * SSS_SPA * tree.spa * trait.spa * add_spa_mult * mul.mul_spa;
+    var spa_cap = parseFloat(document.getElementById('spa_cap').value) || 0.1;
+    var cc_cap = (parseFloat(document.getElementById('cc_cap').value) || 100) / 100;
+    final_spa = Math.max(spa_cap, final_spa);
+    var final_cc = Math.min(cc_cap, ((unit.base_cc||0)/100) + tree.cc + (trait.cc||0) + add.cc + mul.mul_cc);
+    var final_cdmg = ((unit.base_cdmg||0)/100) + tree.cdmg + (trait.cdmg||0) + add.cdmg + mul.mul_cdmg;
+    var crit_factor = 1 + (final_cc * final_cdmg);
+    var raw_dps = (final_dmg * crit_factor) / final_spa;
+    if (trait.special === 'sunder') raw_dps *= 1.3333;
+    var base_dot = unit.base_dot;
+    if (trait.special === 'inflict') base_dot *= 1.30;
+    var final_abil = unit.base_abil_dps * LV * SSS_DMG * tree.abil * trait.abil;
+    var final_dot  = base_dot * LV * SSS_DMG * tree.dot * trait.dot;
+    var total_raw  = raw_dps * placements;
+    var total_dot  = final_dot * placements;
+    var total_abil = unit.abil_cooldown === 'global' ? final_abil : final_abil * placements;
+    return { total: total_raw + total_abil + total_dot, basic: total_raw, abil: total_abil, dot: total_dot, tree: tree.name, trait: trait.name, placements: placements };
+}
+
+function getAllCombos(unit, add, mul) {
+    var results = [];
+    for (var t in TREES) for (var tr in TRAITS) {
+        results.push(runSim(unit, TREES[t], TRAITS[tr], add, mul));
+    }
+    results.sort(function(a,b){ return b.total - a.total; });
+    return results;
+}
+
+function findBest(unit, add, mul) { return getAllCombos(unit, add, mul)[0]; }
+
+function fmt(v) {
+    if (!v || isNaN(v)) return '0';
+    if (v >= 1e9) return (v/1e9).toFixed(2)+'B';
+    if (v >= 1e6) return (v/1e6).toFixed(2)+'M';
+    if (v >= 1e3) return (v/1e3).toFixed(1)+'k';
+    return v.toFixed(1);
+}
+
+// ===== Main update =====
+function update() {
+    var base_dmg = parseFloat(document.getElementById('base_dmg').value) || 0;
+    var base_spa = parseFloat(document.getElementById('base_spa').value) || 1;
+
+    var base_abil_dps = calcBaseAbilDps(base_dmg);
+    var base_dot = calcBaseDot(base_dmg);
+
+    var add = readPassives('add', 5);
+    var mul = readPassives('mul', 5);
+
+    var unit = {
+        base_dmg: base_dmg,
+        base_spa: base_spa,
+        base_rng: parseFloat(document.getElementById('base_rng').value) || 0,
+        max_placement: parseInt(document.getElementById('max_placement').value) || 1,
+        base_cc: parseFloat(document.getElementById('base_cc').value) || 0,
+        base_cdmg: parseFloat(document.getElementById('base_cdmg').value) || 0,
+        base_abil_dps: base_abil_dps,
+        base_dot: base_dot,
+        abil_cooldown: document.getElementById('abil_cooldown').value
+    };
+
+    var best = findBest(unit, add, mul);
+
+    document.getElementById('peak_dps').textContent = fmt(best.total);
+    document.getElementById('basic_dps').textContent = fmt(best.basic);
+    document.getElementById('abil_dps_disp').textContent = fmt(best.abil);
+    document.getElementById('dot_dps_disp').textContent = fmt(best.dot);
+    document.getElementById('calc_abil').textContent = Math.round(base_abil_dps);
+    document.getElementById('calc_dot').textContent = Math.round(base_dot);
+
+    document.getElementById('best_badges').innerHTML =
+        '<span class="badge b-trait">'+best.trait+'</span>' +
+        '<span class="badge b-tree">'+best.tree+' Tree</span>';
+
+    // Top 5
+    var combos = getAllCombos(unit, add, mul);
+    var top5html = '';
+    for (var i = 0; i < Math.min(5, combos.length); i++) {
+        var c = combos[i];
+        var medal = ['🥇','🥈','🥉','4️⃣','5️⃣'][i];
+        top5html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;">' +
+            '<span style="font-size:16px;">'+medal+'</span>' +
+            '<span class="badge b-trait">'+c.trait+'</span>' +
+            '<span class="badge b-tree">'+c.tree+'</span>' +
+            '<span style="margin-left:auto;font-family:monospace;font-weight:800;color:var(--green);">'+fmt(c.total)+'</span>' +
+            '</div>';
+    }
+    document.getElementById('top5_list').innerHTML = top5html;
+
+    // Manual selector result
+    var manTrait = document.getElementById('manual_trait') ? document.getElementById('manual_trait').value : '';
+    var manTree  = document.getElementById('manual_tree')  ? document.getElementById('manual_tree').value  : '';
+    if (manTrait && manTree && TRAITS[manTrait] && TREES[manTree]) {
+        var manResult = runSim(unit, TREES[manTree], TRAITS[manTrait], add, mul);
+        document.getElementById('manual_result').textContent = fmt(manResult.total);
+        document.getElementById('manual_breakdown').textContent =
+            'Basic: '+fmt(manResult.basic)+' | Abil: '+fmt(manResult.abil)+' | DoT: '+fmt(manResult.dot);
+    } else {
+        var mr = document.getElementById('manual_result');
+        var mb = document.getElementById('manual_breakdown');
+        if (mr) mr.textContent = '—';
+        if (mb) mb.textContent = 'Select a trait and tree above';
+    }
+
+    // Lua block — includes passive combined multipliers
+    var key = document.getElementById('key').value || 'Unit';
+
+    // Round to 4dp for Lua cleanliness
+    function r4(v){ return Math.round(v*10000)/10000; }
+
+    // Passive summary text for display
+    var passiveSummaryLines = [];
+    for (var pi = 0; pi < 5; pi++) {
+        var pt = (document.getElementById('add_type_'+pi)||{}).value;
+        var pv = parseFloat((document.getElementById('add_val_'+pi)||{}).value)||0;
+        if (pt && pv) passiveSummaryLines.push('+ Additive ' + pt + ': ' + pv + (pt.includes('%')||pt==='Crit Chance'||pt==='Crit DMG'?'%':''));
+    }
+    for (var pi = 0; pi < 5; pi++) {
+        var pt = (document.getElementById('mul_type_'+pi)||{}).value;
+        var pv = parseFloat((document.getElementById('mul_val_'+pi)||{}).value)||0;
+        if (pt && pv) passiveSummaryLines.push('× Multiplicative ' + pt + ': ' + pv + '%');
+    }
+    document.getElementById('passive_summary').textContent = passiveSummaryLines.length
+        ? passiveSummaryLines.join('\n')
+        : 'No passives entered';
+
+    var lua =
+'        ["' + key + '"] = {\n' +
+'            name = "' + (document.getElementById('name').value||'') + '",\n' +
+'            base_dmg = ' + base_dmg + ',\n' +
+'            base_spa = ' + base_spa + ',\n' +
+'            base_rng = ' + (parseFloat(document.getElementById('base_rng').value)||0) + ',\n' +
+'            max_placement = ' + (parseInt(document.getElementById('max_placement').value)||1) + ',\n' +
+'            abil_cooldown = "' + document.getElementById('abil_cooldown').value + '",\n' +
+'            base_abil_dps = ' + Math.round(base_abil_dps) + ',\n' +
+'            base_dot = ' + Math.round(base_dot) + ',\n' +
+'            base_cc = ' + (parseFloat(document.getElementById('base_cc').value)||0) + ',\n' +
+'            base_cdmg = ' + (parseFloat(document.getElementById('base_cdmg').value)||0) + ',\n' +
+'            add_dmg = ' + r4(add.dmg) + ', add_spa = ' + r4(add.spa) + ', add_rng = ' + r4(add.rng) + ', add_cc = ' + r4(add.cc) + ', add_cdmg = ' + r4(add.cdmg) + ', add_flat = ' + (add.flat||0) + ',\n' +
+'            mul_dmg = ' + r4(mul.mul_dmg) + ', mul_spa = ' + r4(mul.mul_spa) + ', mul_rng = ' + r4(mul.mul_rng) + ', mul_cc = ' + r4(mul.mul_cc) + ', mul_cdmg = ' + r4(mul.mul_cdmg) + ',\n' +
+'            image = "' + document.getElementById('image').value + '",\n' +
+'            element = "' + document.getElementById('element').value + '",\n' +
+'            sub_type = "' + document.getElementById('sub_type').value + '"\n' +
+'        },';
+    document.getElementById('lua_output').textContent = lua;
+}
+
+function copyLua() {
+    navigator.clipboard.writeText(document.getElementById('lua_output').textContent).then(function(){
+        document.getElementById('copied_msg').textContent = '✔ Copied to clipboard!';
+        setTimeout(function(){ document.getElementById('copied_msg').textContent = ''; }, 2000);
+    });
+}
+
+// ===== Init =====
+// Wire manual selects
+['manual_trait','manual_tree'].forEach(function(id){
+    var el = document.getElementById(id);
+    if(el) el.addEventListener('change', update);
+});
+buildPassiveRows('add_passives', 5, 'add');
+buildPassiveRows('mul_passives', 5, 'mul');
+buildDots(3);
+buildAbilities(3);
+
+document.querySelectorAll('input, select').forEach(function(el){
+    el.addEventListener('input', update);
+    el.addEventListener('change', update);
+});
+update();
+</script>
+</body>
+</html>
