@@ -176,12 +176,12 @@ input:focus, select:focus { outline: none; border-color: var(--orange); }
 <div class="card">
     <h2><span class="dot"></span>Unit Info</h2>
     <div class="field"><label>Unit Key (table key)</label><input id="key" value="Triple T"></div>
-    <div class="field"><label>Display Name</label><input id="name" value="Triple Tung Tung Tung Sahur"></div>
+    <div class="field"><label>Display Name</label><input id="name" value="Triple Threat"></div>
     <div class="row2">
         <div class="field"><label>Element</label><input id="element" value="Darkness"></div>
         <div class="field"><label>Sub Type</label><input id="sub_type" value="Physical"></div>
     </div>
-    <div class="field"><label>Image File</label><input id="image" value="Triple_Tung.png"></div>
+    <div class="field"><label>Image File</label><input id="image" value="Triple_Threat_Face.png"></div>
 </div>
 
 <!-- Base Stats -->
@@ -263,6 +263,7 @@ input:focus, select:focus { outline: none; border-color: var(--orange); }
     <div class="best-build">
         <div class="bb-lbl">Optimal Build</div>
         <div id="best_badges">—</div>
+        <div id="best_stats"></div>
     </div>
 
     <!-- Calculated base values (what goes into Lua) -->
@@ -494,13 +495,14 @@ function calcBaseAbilDps(base_dmg) {
     return total;
 }
 
-function calcBaseDot(base_dmg) {
+function calcDotDps(final_dmg, final_spa) {
+    // DoT DPS = Final Damage x DoT% / SPA
+    // Proc duration cancels — each attack procs a DoT worth DoT% of damage
     var total = 0;
     for (var i = 0; i < 3; i++) {
         var mult = parseFloat((document.getElementById('dot_mult_'+i)||{}).value) || 0;
-        var proc = parseFloat((document.getElementById('dot_proc_'+i)||{}).value) || 0;
-        if (!mult || !proc) continue;
-        total += (base_dmg * mult) / proc;
+        if (!mult || !final_spa) continue;
+        total += (final_dmg * mult) / final_spa;
     }
     return total;
 }
@@ -521,14 +523,16 @@ function runSim(unit, tree, trait, add, mul) {
     var crit_factor = 1 + (final_cc * final_cdmg);
     var raw_dps = (final_dmg * crit_factor) / final_spa;
     if (trait.special === 'sunder') raw_dps *= 1.3333;
-    var base_dot = unit.base_dot;
-    if (trait.special === 'inflict') base_dot *= 1.30;
     var final_abil = unit.base_abil_dps * LV * SSS_DMG * tree.abil * trait.abil;
-    var final_dot  = base_dot * LV * SSS_DMG * tree.dot * trait.dot;
+    // DoT scales with final buffed attack damage / SPA
+    var final_dot = calcDotDps(final_dmg, final_spa);
+    if (trait.special === 'inflict') final_dot *= 1.30;
+    // Range
+    var final_rng = (unit.base_rng || 0) * 1.125 * tree.rng * trait.rng * (1 + add.rng) * mul.mul_rng;
     var total_raw  = raw_dps * placements;
     var total_dot  = final_dot * placements;
     var total_abil = unit.abil_cooldown === 'global' ? final_abil : final_abil * placements;
-    return { total: total_raw + total_abil + total_dot, basic: total_raw, abil: total_abil, dot: total_dot, tree: tree.name, trait: trait.name, placements: placements };
+    return { total: total_raw + total_abil + total_dot, basic: total_raw, abil: total_abil, dot: total_dot, tree: tree.name, trait: trait.name, placements: placements, dmg: final_dmg, spa: final_spa, rng: final_rng };
 }
 
 function getAllCombos(unit, add, mul) {
@@ -556,7 +560,7 @@ function update() {
     var base_spa = parseFloat(document.getElementById('base_spa').value) || 1;
 
     var base_abil_dps = calcBaseAbilDps(base_dmg);
-    var base_dot = calcBaseDot(base_dmg);
+    var base_dot = 0; // DoT now calculated inside runSim based on final damage
 
     var add = readPassives('add', 5);
     var mul = readPassives('mul', 5);
@@ -585,6 +589,14 @@ function update() {
     document.getElementById('best_badges').innerHTML =
         '<span class="badge b-trait">'+best.trait+'</span>' +
         '<span class="badge b-tree">'+best.tree+' Tree</span>';
+
+    document.getElementById('best_stats').innerHTML =
+        '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:10px;">' +
+        '<tr><td style="color:#f87171;font-weight:700;padding:2px 0;">Damage</td><td style="text-align:right;font-family:monospace;font-weight:800;color:#fff;">'+fmt(best.dmg)+'</td></tr>' +
+        '<tr><td style="color:#38bdf8;font-weight:600;padding:2px 0;">SPA</td><td style="text-align:right;font-family:monospace;color:#f8f8f2;">'+best.spa.toFixed(2)+'s</td></tr>' +
+        '<tr><td style="color:#a78bfa;font-weight:600;padding:2px 0;">Range</td><td style="text-align:right;font-family:monospace;color:#f8f8f2;">'+best.rng.toFixed(1)+'</td></tr>' +
+        '<tr><td style="color:#94a3b8;font-weight:600;padding:2px 0;">Placements</td><td style="text-align:right;font-family:monospace;color:#f8f8f2;">x'+best.placements+'</td></tr>' +
+        '</table>';
 
     // Top 5
     var combos = getAllCombos(unit, add, mul);
@@ -650,8 +662,18 @@ function update() {
 '            base_dot = ' + Math.round(base_dot) + ',\n' +
 '            base_cc = ' + (parseFloat(document.getElementById('base_cc').value)||0) + ',\n' +
 '            base_cdmg = ' + (parseFloat(document.getElementById('base_cdmg').value)||0) + ',\n' +
-'            add_dmg = ' + r4(add.dmg) + ', add_spa = ' + r4(add.spa) + ', add_rng = ' + r4(add.rng) + ', add_cc = ' + r4(add.cc) + ', add_cdmg = ' + r4(add.cdmg) + ', add_flat = ' + (add.flat||0) + ',\n' +
-'            mul_dmg = ' + r4(mul.mul_dmg) + ', mul_spa = ' + r4(mul.mul_spa) + ', mul_rng = ' + r4(mul.mul_rng) + ', mul_cc = ' + r4(mul.mul_cc) + ', mul_cdmg = ' + r4(mul.mul_cdmg) + ',\n' +
+'            add_dmg = ' + r4(add.dmg) + ',\n' +
+'            add_spa = ' + r4(add.spa) + ',\n' +
+'            add_rng = ' + r4(add.rng) + ',\n' +
+'            add_cc  = ' + r4(add.cc)  + ',\n' +
+'            add_cdmg = ' + r4(add.cdmg) + ',\n' +
+'            add_flat = ' + (add.flat||0) + ',\n' +
+'            mul_dmg = ' + r4(mul.mul_dmg) + ',\n' +
+'            mul_spa = ' + r4(mul.mul_spa) + ',\n' +
+'            mul_rng = ' + r4(mul.mul_rng) + ',\n' +
+'            mul_cc  = ' + r4(mul.mul_cc)  + ',\n' +
+'            mul_cdmg = ' + r4(mul.mul_cdmg) + ',\n' +
+'            passive_notes = "' + (passiveSummaryLines.length ? passiveSummaryLines.join(' | ') : 'None') + '",\n' +
 '            image = "' + document.getElementById('image').value + '",\n' +
 '            element = "' + document.getElementById('element').value + '",\n' +
 '            sub_type = "' + document.getElementById('sub_type').value + '"\n' +
@@ -660,10 +682,41 @@ function update() {
 }
 
 function copyLua() {
-    navigator.clipboard.writeText(document.getElementById('lua_output').textContent).then(function(){
+    var text = document.getElementById('lua_output').textContent;
+    var btn = document.querySelector('.btn');
+
+    function onSuccess() {
         document.getElementById('copied_msg').textContent = '✔ Copied to clipboard!';
-        setTimeout(function(){ document.getElementById('copied_msg').textContent = ''; }, 2000);
-    });
+        if (btn) { btn.textContent = '✔ Copied!'; btn.style.background = '#22c55e'; }
+        setTimeout(function(){
+            document.getElementById('copied_msg').textContent = '';
+            if (btn) { btn.textContent = 'Copy Lua Block'; btn.style.background = ''; }
+        }, 2000);
+    }
+
+    function onFail() {
+        // Fallback: create a hidden textarea, select it, execCommand copy
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        try {
+            var ok = document.execCommand('copy');
+            if (ok) onSuccess();
+            else document.getElementById('copied_msg').textContent = 'Copy failed — please copy manually';
+        } catch(e) {
+            document.getElementById('copied_msg').textContent = 'Copy failed — please copy manually';
+        }
+        document.body.removeChild(ta);
+    }
+
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(onSuccess).catch(onFail);
+    } else {
+        onFail();
+    }
 }
 
 // ===== Init =====
